@@ -128,7 +128,6 @@ int page_flipping(uint32_t *main_buf, uint32_t *aux_buf) {
   return 0;
 }
 
-/*to prevent us from making everything global*/
 unsigned get_h_res() { return h_res; }
 
 unsigned get_v_res() { return v_res; }

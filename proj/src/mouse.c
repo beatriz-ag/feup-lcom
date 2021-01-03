@@ -25,20 +25,20 @@ int(mouse_subscribe_int)(uint8_t *bit_no) {
   }
   return 0;
 }
+
+int(mouse_unsubscribe_int)() {
+  if (sys_irqrmpolicy(&mouse_hook_id)) {
+    printf("Error in sys_irqrmpolicy.\n");
+    return 1;
+  }
+  return 0;
+}
+
 int check_obf() {
   uint8_t stat;
   if (util_sys_inb(KBC_ST_REG, &stat) != OK)
     printf("ERROR reading stat\n");
   if (stat & OBF) {
-    return 1;
-  }
-
-  return 0;
-}
-
-int(mouse_unsubscribe_int)() {
-  if (sys_irqrmpolicy(&mouse_hook_id)) {
-    printf("Error in sys_irqrmpolicy.\n");
     return 1;
   }
   return 0;
@@ -53,8 +53,11 @@ void(mouse_ih)() {
     if (((stat & (PARITY | TIMEOUT)) != 0) || (stat & AUX) == 0) { //checking errors and making sure it was a mouse interruption other than a keyboard (both kbc peripherals)
       mouse_err = true;
     }
-    mouse_err = false;
-    util_sys_inb(KBC_OUT_BUF, &mouse_byte);                           //reading data
+    else {
+
+      mouse_err = false;
+      util_sys_inb(KBC_OUT_BUF, &mouse_byte);
+    }                                                                 //reading data
     if (mouse_byte_tracker == 0 && (mouse_byte & BIT(3)) >> 3 == 0) { //mouse is not in sync because we know for sure the the bit 3 of mouse's 1st byte is set
       mouse_err = true;
     }

@@ -8,6 +8,7 @@
 void update_display() {
   clear_buffer(aux_buf);
   display_xpm(aux_buf, current_bg.data, current_bg.pos_x, current_bg.pos_y, current_bg.width, current_bg.height);
+  display_time();
   display_xpm(aux_buf, cursor->data, cursor->pos_x, cursor->pos_y, cursor->width, cursor->height);
   page_flipping(main_buf, aux_buf);
 }
@@ -38,9 +39,42 @@ void update_playing_display() {
   display_xpm(aux_buf, sea_front->data, sea_front->pos_x, sea_front->pos_y, sea_front->width, sea_front->height);
   display_xpm(aux_buf, current_bg.data, current_bg.pos_x, current_bg.pos_y, current_bg.width, current_bg.height);
   display_presents();
-  display_xpm(aux_buf, current_santa->data, current_santa->pos_x, current_santa->pos_y, current_santa->width, current_santa->height);
+  display_xpm(aux_buf, current_santa.data, current_santa.pos_x, current_santa.pos_y, current_santa.width, current_santa.height);
   display_cronometer();
   page_flipping(main_buf, aux_buf);
+}
+
+void update_sea_pos() {
+  if ((timer_counter % HALF_SECOND_TICKS) == 0) {
+    presents_rot++;
+  }
+  static int counter_sea = 0;
+  counter_sea++;
+
+  sea_back->pos_x++;
+  sea_middle->pos_x--;
+  if (!(counter_sea % WAVE_WIDTH)) {
+    sea_back->pos_x = SEA_BACK_X0;
+    sea_middle->pos_x = SEA_MIDDLE_X0;
+  }
+}
+
+void display_init() {
+  clear_buffer(aux_buf);
+  display_xpm(aux_buf, loading[0]->data, loading[0]->pos_x, loading[0]->pos_y, loading[0]->width, loading[0]->height);
+  display_xpm(aux_buf, loading[2]->data, loading[2]->pos_x, loading[2]->pos_y, loading[2]->width, loading[2]->height);
+  display_xpm(aux_buf, loading[1]->data, loading[1]->pos_x, loading[1]->pos_y, loading[1]->width, loading[1]->height);
+  page_flipping(main_buf, aux_buf);
+}
+
+void display_time() {
+  update_time();
+  uint16_t pos_x = get_h_res();
+  uint16_t pos_y = 0;
+  for (int i = 4; i >= 0; i--) {
+    pos_x -= rtc_time[i]->width;
+    display_xpm(aux_buf, rtc_time[i]->data, pos_x, pos_y, rtc_time[i]->width, rtc_time[i]->height);
+  }
 }
 
 void display_cronometer() {
@@ -113,8 +147,8 @@ bool check_button(uint8_t button) {
 int check_present() {
   for (unsigned i = 0; i < NUM_PRESENTS; i++) {
     if (!presents[i].catched) {
-      if (((current_santa->pos_x + current_santa->width / 2) >= presents[i].pos_x) && ((current_santa->pos_x + current_santa->width / 2) <= presents[i].pos_x + presents_animated[i].width)) {
-        if ((current_santa->pos_y < presents[i].pos_y) && ((current_santa->pos_y + current_santa->height) > presents[i].pos_y)) {
+      if (((current_santa.pos_x + current_santa.width / 2) >= presents[i].pos_x) && ((current_santa.pos_x + current_santa.width / 2) <= presents[i].pos_x + presents_animated[i].width)) {
+        if ((current_santa.pos_y < presents[i].pos_y) && ((current_santa.pos_y + current_santa.height) > presents[i].pos_y)) {
           return i;
         }
       }
@@ -139,7 +173,7 @@ void check_victory() {
 
 int check_right_left() {
   for (unsigned i = 0; i <= 4; i++) {
-    if (current_santa->data == santa_jump_right[i]->data) {
+    if (current_santa.data == santa_jump_right[i]->data || current_santa.data == santa_walk_right[i]->data) {
       return 0; /*santa was turned to the right while falling so it will be standing to the right when he lands*/
     }
   }
@@ -147,12 +181,24 @@ int check_right_left() {
 }
 
 void catch_present(int present_ix) {
-  printf("catched : %d \n", present_ix);
   presents[present_ix].catched = true;
   display_xpm(main_buf, bigpresent.data, presents[present_ix].pos_x - 40, presents[present_ix].pos_y - 40, bigpresent.width, bigpresent.height);
-  display_xpm(main_buf, current_santa->data, current_santa->pos_x, current_santa->pos_y, current_santa->width, current_santa->height);
+  display_xpm(main_buf, current_santa.data, current_santa.pos_x, current_santa.pos_y, current_santa.width, current_santa.height);
   tickdelay(micros_to_ticks(1500));
   presents_catched++;
+}
+
+void update_time() {
+  BCD_to_binary(&curr_time.hours);
+  BCD_to_binary(&curr_time.minutes);
+  curr_time.hours = binary_to_decimal(curr_time.hours);
+  curr_time.minutes = binary_to_decimal(curr_time.minutes);
+
+  rtc_time[0] = rtc_numbers[curr_time.hours / 10];
+  rtc_time[1] = rtc_numbers[curr_time.hours % 10];
+  rtc_time[2] = rtc_sep;
+  rtc_time[3] = rtc_numbers[curr_time.minutes / 10];
+  rtc_time[4] = rtc_numbers[curr_time.minutes % 10];
 }
 
 void update_cronometer() {
@@ -200,14 +246,14 @@ void update_cursor() {
 }
 
 void set_santa(struct sprite *new_sp) {
-  current_santa->data = new_sp->data;
-  current_santa->height = new_sp->height;
-  current_santa->width = new_sp->width;
+  current_santa.data = new_sp->data;
+  current_santa.height = new_sp->height;
+  current_santa.width = new_sp->width;
 }
 
 void set_player() {
   if (char_state == COVID_SANTA) {
-    current_santa = covid_santa_sp;
+    current_santa = *covid_santa_sp;
     for (unsigned int i = 0; i < 5; i++) {
       current_santa_walk_right[i] = covid_santa_walk_right[i];
       current_santa_walk_left[i] = covid_santa_walk_left[i];
@@ -217,7 +263,7 @@ void set_player() {
     curr_santa_sp = covid_santa_sp;
   }
   else if (char_state == HAPPY_SANTA) {
-    current_santa = santa_sp;
+    current_santa = *santa_sp;
     for (unsigned int i = 0; i < 5; i++) {
       current_santa_walk_right[i] = santa_walk_right[i];
       current_santa_walk_left[i] = santa_walk_left[i];
@@ -229,11 +275,16 @@ void set_player() {
 }
 
 void reset_santa() {
-  current_santa->data = curr_santa_sp->data;
-  current_santa->height = curr_santa_sp->height;
-  current_santa->width = curr_santa_sp->width;
-  current_santa->pos_x = curr_santa_sp->pos_x;
-  current_santa->pos_y = curr_santa_sp->pos_y;
+  moving = false;
+  sea_back->pos_x = SEA_BACK_X0;
+  sea_middle->pos_x = SEA_MIDDLE_X0;
+  reset_presents();
+  reset_cronometer();
+  current_santa.data = curr_santa_sp->data;
+  current_santa.height = curr_santa_sp->height;
+  current_santa.width = curr_santa_sp->width;
+  current_santa.pos_x = curr_santa_sp->pos_x;
+  current_santa.pos_y = curr_santa_sp->pos_y;
   santa_state = STANDING_RIGHT;
 }
 
@@ -318,7 +369,6 @@ void mouse_events_handler() {
   else if (!mouse_packet.lb && game_state != INSTRUCTIONS) { //no relevant button was pressed
     return;
   }
-
   switch (game_state) {
     case INITMENU:
       if (check_button(MAIN_SINGLE_PLAYER)) {
@@ -351,6 +401,9 @@ void mouse_events_handler() {
       if (check_button(SWIPE_RIGHT)) {
         if (moving_left) {
           moving_right = true;
+          struct sprite *aux = players[0];
+          players[0] = players[1];
+          players[1] = aux;
         }
         else if (!moving_left && !moving_right) {
           moving_right = true;
@@ -362,6 +415,9 @@ void mouse_events_handler() {
       else if (check_button(SWIPE_LEFT)) {
         if (moving_right) {
           moving_left = true;
+          struct sprite *aux = players[0];
+          players[0] = players[1];
+          players[1] = aux;
         }
         else if (!moving_left && !moving_right) {
           moving_left = true;
@@ -379,6 +435,7 @@ void mouse_events_handler() {
     case PAUSE:
       if (check_button(PAUSED_RESUME)) {
         game_state = PLAYING;
+        printf("2\n");
         current_bg = *backgrounds->background_sp;
       }
       else if (check_button(PAUSED_MAIN_MENU)) {
@@ -551,7 +608,8 @@ void keyboard_events_handler() {
 
 void timer_events_handler() {
   if (game_state == PLAYING) {
-    if (timer_counter % 60 == 0) {
+    update_sea_pos();
+    if ((timer_counter % 60 == 0) && moving) {
       cronometer--;
       update_cronometer();
     }
@@ -565,7 +623,7 @@ void timer_events_handler() {
   }
   else if (game_state == CHOOSE_PLAYER) {
     if (moving_right) {
-      if (players[(choose_player_ix % 2)]->pos_x == OUT_RIGHT_POS_X) {
+      if (players[((choose_player_ix + 1) % 2)]->pos_x == IN_POS_X) {
         moving_right = false;
         moving_left = false;
         choose_player_ix++;
@@ -585,7 +643,7 @@ void timer_events_handler() {
       }
     }
     else if (moving_left) {
-      if (players[(choose_player_ix % 2)]->pos_x == OUT_LEFT_POS_X) {
+      if (players[((choose_player_ix + 1) % 2)]->pos_x == IN_POS_X) {
         moving_right = false;
         moving_left = false;
         choose_player_ix++;
@@ -613,13 +671,13 @@ void timer_events_handler() {
 
 int get_current_platform() {
   for (unsigned i = 0; i < NUM_PLATFORMS; i++) {
-    if (((current_santa->pos_y + current_santa->height) <= platforms[i].pos_y + DELTA_Y) && ((current_santa->pos_y + current_santa->height) >= platforms[i].pos_y - DELTA_Y)) {
-      if (current_santa->pos_x <= current_santa->width / 2) {
-        if (((current_santa->pos_x + (current_santa->width / 2)) <= (platforms[i].pos_x + platforms[i].width)) && (current_santa->pos_x >= platforms[i].pos_x)) {
+    if (((current_santa.pos_y + current_santa.height) <= platforms[i].pos_y + DELTA_Y) && ((current_santa.pos_y + current_santa.height) >= platforms[i].pos_y - DELTA_Y)) {
+      if (current_santa.pos_x <= current_santa.width / 2) {
+        if (((current_santa.pos_x + (current_santa.width / 2)) <= (platforms[i].pos_x + platforms[i].width)) && (current_santa.pos_x >= platforms[i].pos_x)) {
           return ((int) i);
         }
       }
-      else if (((current_santa->pos_x + (current_santa->width / 2)) <= (platforms[i].pos_x + platforms[i].width)) && ((current_santa->pos_x + (current_santa->width / 2)) >= platforms[i].pos_x)) {
+      else if (((current_santa.pos_x + (current_santa.width / 2)) <= (platforms[i].pos_x + platforms[i].width)) && ((current_santa.pos_x + (current_santa.width / 2)) >= platforms[i].pos_x)) {
         return ((int) i);
       }
     }
@@ -634,53 +692,53 @@ void check_collision(uint16_t step) {
       curr_platform = get_current_platform();
       switch (curr_platform) {
         case 0:
-          if ((int) current_santa->pos_x - (int) step < 0) {
-            current_santa->pos_x = 0;
+          if ((int) current_santa.pos_x - (int) step < 0) {
+            current_santa.pos_x = 0;
           }
           break;
         case 1:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 2:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 3:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 4:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             santa_state = STANDING_LEFT;
           }
           break;
         case 5:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 6:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 7:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
           break;
         case 8:
-          if ((current_santa->pos_x + (current_santa->width / 2) - step) < platforms[curr_platform].pos_x) {
+          if ((current_santa.pos_x + (current_santa.width / 2) - step) < platforms[curr_platform].pos_x) {
             set_santa(current_santa_jump_left[4]);
             santa_state = FALLING;
           }
@@ -688,66 +746,66 @@ void check_collision(uint16_t step) {
         default:
           break;
       }
-      if (santa_state != STANDING_LEFT && ((int) current_santa->pos_x - step) > 0) {
-        current_santa->pos_x -= step;
+      if (santa_state != STANDING_LEFT && ((int) current_santa.pos_x - step) > 0) {
+        current_santa.pos_x -= step;
       }
       if (step == abs(mouse_packet.delta_x) && santa_state != FALLING) { /*santa was moved using the mouse*/
         santa_state = STANDING_LEFT;
       }
       break;
     case WALKING_RIGHT:
-      if (current_santa->pos_x + current_santa->width + step > get_h_res())
+      if (current_santa.pos_x + current_santa.width + step > get_h_res())
         return;
       curr_platform = get_current_platform();
       switch (curr_platform) {
         case 0:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 1:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             santa_state = STANDING_RIGHT;
           }
           break;
         case 2:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 3:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 4:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 5:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 6:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             set_santa(current_santa_jump_right[4]);
             santa_state = FALLING;
           }
           break;
         case 7:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) >= (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) >= IGLO_X) {
             game_state = IGLO;
           }
           break;
         case 8:
-          if ((current_santa->pos_x + (current_santa->width / 2) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
+          if ((current_santa.pos_x + (current_santa.width / 4) + step) > (platforms[curr_platform].pos_x + platforms[curr_platform].width)) {
             santa_state = STANDING_RIGHT;
           }
           break;
@@ -756,50 +814,83 @@ void check_collision(uint16_t step) {
           santa_state = FALLING;
           break;
       }
-      if (santa_state != STANDING_RIGHT && (current_santa->pos_x + step < get_h_res())) {
-        current_santa->pos_x += step;
+      if (santa_state != STANDING_RIGHT && (current_santa.pos_x + step < get_h_res())) {
+        current_santa.pos_x += step;
       }
       if (step == abs(mouse_packet.delta_x) && santa_state != FALLING) { /*santa was moved using the mouse*/
         santa_state = STANDING_RIGHT;
       }
-      if (current_santa->pos_x > get_h_res())
-        current_santa->pos_x = get_h_res() - current_santa->width;
+      if (current_santa.pos_x > get_h_res())
+        current_santa.pos_x = get_h_res() - current_santa.width;
       break;
     case JUMPING_RIGHT:
-      if (current_santa->pos_x + current_santa->width + step > get_h_res()) {
-        current_santa->pos_x = get_h_res() - current_santa->width;
+      if (current_santa.pos_x + current_santa.width + step > get_h_res()) {
+        current_santa.pos_x = get_h_res() - current_santa.width;
       }
-      if (current_santa->pos_y - STEP_JUMP_Y < 0) {
+      if (current_santa.pos_y - STEP_JUMP_Y < 0) {
         set_santa(current_santa_jump_right[4]);
         santa_state = FALLING;
       }
-      else if (current_santa->pos_x + current_santa->width + STEP_JUMP_X > get_h_res()) {
-        current_santa->pos_y -= STEP_JUMP_Y;
+      else if (current_santa.pos_x + current_santa.width + STEP_JUMP_X > get_h_res()) {
+        current_santa.pos_y -= STEP_JUMP_Y;
       }
       else {
-        current_santa->pos_x += STEP_JUMP_X;
-        current_santa->pos_y -= STEP_JUMP_Y;
+        current_santa.pos_x += STEP_JUMP_X;
+        current_santa.pos_y -= STEP_JUMP_Y;
       }
       break;
     case JUMPING_LEFT:
-      if (current_santa->pos_y - STEP_JUMP_Y < 0 || current_santa->pos_x - step < 0) {
+      if ((int) current_santa.pos_x - STEP_JUMP_X < 0) {
+        current_santa.pos_y -= STEP_JUMP_Y;
+        santa_state = FALLING;
+      }
+      else if (current_santa.pos_y - STEP_JUMP_Y < 0 || current_santa.pos_x - step < 0) {
         set_santa(current_santa_jump_left[4]);
         santa_state = FALLING;
       }
-      else if ((int) current_santa->pos_x - STEP_JUMP_X < 0) {
-        current_santa->pos_y -= STEP_JUMP_Y;
-        santa_state = FALLING;
-      }
       else {
-        current_santa->pos_x -= STEP_JUMP_X;
-        current_santa->pos_y -= STEP_JUMP_Y;
+        current_santa.pos_x -= STEP_JUMP_X;
+        current_santa.pos_y -= STEP_JUMP_Y;
       }
       break;
     case FALLING:
+
       for (unsigned i = 0; i < NUM_PLATFORMS; i++) {
-        if (((current_santa->pos_y + current_santa->height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa->pos_y + current_santa->height) <= platforms[i].pos_y) && ((current_santa->pos_x + current_santa->width / 2) >= platforms[i].pos_x) && ((current_santa->pos_x + (current_santa->width / 2)) <= (platforms[i].pos_x + platforms[i].width))) {
+        if (((current_santa.pos_y + current_santa.height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa.pos_y + current_santa.height) < platforms[i].pos_y) && ((current_santa.pos_x + santa_sp->width / 4) >= platforms[i].pos_x) && ((current_santa.pos_x + (santa_sp->width / 4)) <= (platforms[i].pos_x + platforms[i].width))) {
           /*santa would cross a plataform so he will stay standing on it*/
-          current_santa->pos_y = platforms[i].pos_y - current_santa->height;
+          current_santa.pos_y = platforms[i].pos_y - current_santa.height;
+          santa_sp_down_counter = 0;
+          if (check_right_left() == 0) {
+            santa_state = STANDING_RIGHT;
+            set_santa(current_santa_walk_right[4]);
+          }
+          else {
+            santa_state = STANDING_LEFT;
+            set_santa(current_santa_walk_left[4]);
+          }
+
+          update_playing_display();
+          break;
+        }
+        if (((current_santa.pos_y + current_santa.height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa.pos_y + current_santa.height) < platforms[i].pos_y) && ((current_santa.pos_x + current_santa.width / 4) >= platforms[i].pos_x) && ((current_santa.pos_x + (current_santa.width / 4)) <= (platforms[i].pos_x + platforms[i].width))) {
+          /*santa would cross a plataform so he will stay standing on it*/
+          current_santa.pos_y = platforms[i].pos_y - current_santa.height;
+          santa_sp_down_counter = 0;
+          if (check_right_left() == 0) {
+            santa_state = STANDING_RIGHT;
+            set_santa(current_santa_walk_right[4]);
+          }
+          else {
+            santa_state = STANDING_LEFT;
+            set_santa(current_santa_walk_left[4]);
+          }
+
+          update_playing_display();
+          break;
+        }
+        else if (((current_santa.pos_y + current_santa.height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa.pos_y + current_santa.height) < platforms[i].pos_y) && ((current_santa.pos_x + current_santa.width >= platforms[i].pos_x) && ((current_santa.pos_x + current_santa.width) <= (platforms[i].pos_x + platforms[i].width)))) {
+          /*santa would cross a plataform so he will stay standing on it*/
+          current_santa.pos_y = platforms[i].pos_y - current_santa.height;
           santa_sp_down_counter = 0;
           if (check_right_left() == 0) {
             santa_state = STANDING_RIGHT;
@@ -815,20 +906,25 @@ void check_collision(uint16_t step) {
         }
       }
       if (santa_state != STANDING_RIGHT && santa_state != STANDING_LEFT) {
-        current_santa->pos_y += STEP_JUMP_Y;
+        current_santa.pos_y += STEP_JUMP_Y;
       }
-      if (current_santa->pos_y + current_santa->height > get_v_res()) {
-        current_santa->height -= STEP_JUMP_Y;
+      if (current_santa.pos_y + current_santa.height > get_v_res()) {
+        current_santa.height -= STEP_JUMP_Y;
       }
-      if (current_santa->pos_y >= get_v_res() - DELTA_Y) {
+      if (current_santa.pos_y >= get_v_res() - DELTA_Y) {
         santa_state = DEAD;
       }
       break;
     case FALLING_RIGHT:
+      if (current_santa.pos_x + current_santa.width > get_h_res()) {
+        santa_state = FALLING;
+        current_santa.pos_x = get_h_res() - current_santa.width;
+        break;
+      }
       for (unsigned i = 0; i < NUM_PLATFORMS; i++) {
-        if (((current_santa->pos_y + current_santa->height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa->pos_y + current_santa->height) <= platforms[i].pos_y) && ((current_santa->pos_x + current_santa->width / 2) >= platforms[i].pos_x) && ((current_santa->pos_x + (current_santa->width / 2)) <= (platforms[i].pos_x + platforms[i].width))) {
-          current_santa->pos_x += step;
-          current_santa->pos_y = platforms[i].pos_y - current_santa->height;
+        if (((current_santa.pos_y + current_santa.height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa.pos_y + current_santa.height) < platforms[i].pos_y) && ((current_santa.pos_x + current_santa.width / 4) >= platforms[i].pos_x) && ((current_santa.pos_x + (current_santa.width / 4)) <= (platforms[i].pos_x + platforms[i].width))) {
+          current_santa.pos_x += step;
+          current_santa.pos_y = platforms[i].pos_y - current_santa.height;
           santa_sp_down_counter = 0;
           santa_state = STANDING_RIGHT;
           set_santa(curr_santa_sp);
@@ -837,25 +933,27 @@ void check_collision(uint16_t step) {
         }
       }
       if (santa_state != STANDING_RIGHT) {
-        current_santa->pos_x += STEP_JUMP_X;
-        current_santa->pos_y += STEP_JUMP_Y;
+        current_santa.pos_x += STEP_JUMP_X;
+        current_santa.pos_y += STEP_JUMP_Y;
       }
-      if (current_santa->pos_y + current_santa->height > get_v_res()) {
-        current_santa->height -= STEP_JUMP_Y;
+      if (current_santa.pos_y + current_santa.height > get_v_res()) {
+        current_santa.height -= STEP_JUMP_Y;
       }
-      if (current_santa->pos_y >= get_v_res() - DELTA_Y) {
+      if (current_santa.pos_y >= get_v_res() - DELTA_Y) {
         santa_state = DEAD;
       }
-      if (current_santa->pos_x + current_santa->width > get_h_res()) {
-        santa_state = FALLING;
-        current_santa->pos_x = get_h_res() - current_santa->width;
-      }
+
       break;
     case FALLING_LEFT:
+      if ((int) current_santa.pos_x - STEP_JUMP_X < 0) {
+        current_santa.pos_x = 0;
+        santa_state = FALLING;
+        break;
+      }
       for (unsigned i = 0; i < NUM_PLATFORMS; i++) {
-        if (((current_santa->pos_y + current_santa->height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa->pos_y + current_santa->height) <= platforms[i].pos_y) && ((current_santa->pos_x + current_santa->width / 2) >= platforms[i].pos_x) && ((current_santa->pos_x + (current_santa->width / 2)) <= (platforms[i].pos_x + platforms[i].width))) {
-          current_santa->pos_x -= step;
-          current_santa->pos_y = platforms[i].pos_y - current_santa->height;
+        if (((current_santa.pos_y + current_santa.height + STEP_JUMP_Y) >= platforms[i].pos_y) && ((current_santa.pos_y + current_santa.height) < platforms[i].pos_y) && ((current_santa.pos_x + current_santa.width / 4) >= platforms[i].pos_x) && ((current_santa.pos_x + (current_santa.width / 4)) <= (platforms[i].pos_x + platforms[i].width))) {
+          current_santa.pos_x -= step;
+          current_santa.pos_y = platforms[i].pos_y - current_santa.height;
           santa_sp_down_counter = 0;
           santa_state = STANDING_LEFT;
           set_santa(current_santa_jump_left[4]);
@@ -864,19 +962,16 @@ void check_collision(uint16_t step) {
         }
       }
       if (santa_state != STANDING_LEFT) {
-        current_santa->pos_x -= STEP_JUMP_X;
-        current_santa->pos_y += STEP_JUMP_Y;
+        current_santa.pos_x -= STEP_JUMP_X;
+        current_santa.pos_y += STEP_JUMP_Y;
       }
-      if (current_santa->pos_y + current_santa->height > get_v_res()) {
-        current_santa->height -= STEP_JUMP_Y;
+      if (current_santa.pos_y + current_santa.height > get_v_res()) {
+        current_santa.height -= STEP_JUMP_Y;
       }
-      if (current_santa->pos_y == get_v_res() - DELTA_Y) {
+      if (current_santa.pos_y == get_v_res() - DELTA_Y) {
         santa_state = DEAD;
       }
-      if (current_santa->pos_x < 0) {
-        current_santa->pos_x = 0;
-        santa_state = FALLING;
-      }
+
       break;
     default:
       break;
@@ -888,6 +983,7 @@ void check_collision(uint16_t step) {
 }
 
 void move_santa_keyboard() {
+  int update = 0;
   int kb_santa_sp_left_counter, kb_santa_sp_right_counter;
   switch (santa_state) {
     case WALKING_LEFT:
@@ -896,8 +992,12 @@ void move_santa_keyboard() {
         set_santa(current_santa_walk_left[kb_santa_sp_left_counter % 5]);
         check_collision(STEP_KB);
         kb_santa_sp_left_counter++;
+        update++;
         tickdelay(micros_to_ticks(WAIT));
-        sea_back->pos_x = (sea_back->pos_x + (i * 2));
+
+        if (update % 3)
+          update_sea_pos();
+
         update_playing_display();
       }
       break;
@@ -907,8 +1007,10 @@ void move_santa_keyboard() {
         set_santa(current_santa_walk_right[kb_santa_sp_right_counter % 5]);
         check_collision(STEP_KB);
         kb_santa_sp_right_counter++;
+        update++;
+        if (update % 3)
+          update_sea_pos();
         tickdelay(micros_to_ticks(WAIT));
-        sea_back->pos_x = (sea_back->pos_x + (i * 2));
         update_playing_display();
       }
       break;
@@ -917,9 +1019,8 @@ void move_santa_keyboard() {
       check_collision(STEP_KB);
       santa_sp_up_counter++;
       tickdelay(micros_to_ticks(WAIT));
-      sea_back->pos_x = (sea_back->pos_x + (i * 2));
       update_playing_display();
-      if (santa_sp_up_counter % 10 == 0) {
+      if (santa_sp_up_counter % 11 == 0) {
         santa_sp_up_counter = 0;
         santa_state = FALLING_RIGHT;
       }
@@ -928,9 +1029,8 @@ void move_santa_keyboard() {
       set_santa(current_santa_jump_left[santa_sp_up_counter % 5]);
       check_collision(STEP_KB);
       santa_sp_up_counter++;
-      sea_back->pos_x = (sea_back->pos_x + (i * 2));
       update_playing_display();
-      if (santa_sp_up_counter % 10 == 0) {
+      if (santa_sp_up_counter % 11 == 0) {
         santa_sp_up_counter = 0;
         santa_state = FALLING_LEFT;
       }
@@ -973,7 +1073,8 @@ void move_santa_mouse() {
       set_santa(current_santa_jump_right[santa_sp_up_counter % 5]);
       check_collision(abs(mouse_packet.delta_x));
       santa_sp_up_counter++;
-      if (santa_sp_up_counter % 10 == 0) {
+      if (santa_sp_up_counter % 11 == 0) {
+        update_sea_pos();
         santa_sp_up_counter = 0;
         santa_state = FALLING_RIGHT;
       }
@@ -982,7 +1083,8 @@ void move_santa_mouse() {
       set_santa(current_santa_jump_left[santa_sp_up_counter % 5]);
       check_collision(abs(mouse_packet.delta_x));
       santa_sp_up_counter++;
-      if (santa_sp_up_counter % 10 == 0) {
+      if (santa_sp_up_counter % 11 == 0) {
+        update_sea_pos();
         santa_sp_up_counter = 0;
         santa_state = FALLING_LEFT;
       }

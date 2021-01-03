@@ -50,149 +50,141 @@
 
 // KBC
 
-#define KBC_ST_REG 0x64  //status register
-#define KBC_CMD_REG 0x64 //command register/byte
-#define KBC_OUT_BUF 0x60 //output buffer
+#define KBC_ST_REG 0x64 /**< @brief Status register */
 
-#define KBC_OBF BIT(0)     //output buffer full
-#define KBC_IBF BIT(1)     //input buffer full
-#define AUX BIT(5)         //mouse data
-#define KBC_TO_ERR BIT(6)  //timeout error
-#define KBC_PAR_ERR BIT(7) //parity error
-#define EN_KBD 0xAE        //enable KBD interface
-#define DIS_KBD 0xAD       //disable KBD interface
+#define KBC_CMD_REG 0x64 /**< @brief Command register */
+#define KBC_OUT_BUF 0x60 /**< @brief Output buffer */
+
+#define KBC_OBF BIT(0)     /**< @brief Output buffer full */
+#define KBC_IBF BIT(1)     /**< @brief Input buffer full */
+#define AUX BIT(5)         /**< @brief Incoming data from mouse*/
+#define KBC_TO_ERR BIT(6)  /**< @brief Time Out Error */
+#define KBC_PAR_ERR BIT(7) /**< @brief Parity Error*/
+#define EN_KBD 0xAE        /**< @brief Enable KBD*/
+#define DIS_KBD 0xAD       /**< @brief Disable KBD*/
 
 /*MOUSE RELATED KBC COMMANDS*/
-#define READ_CB 0x20     //read command byte
-#define WRITE_CB 0x60    //write command byte
-#define EN_MOUSE 0xA8    //enable mouse
-#define DIS_MOUSE 0xA7   //disable mouse
-#define CHECK_INTER 0xA9 //check mouse interface
-#define WRITE_BYTE 0xD4  //write byte to mouse
+#define READ_CB 0x20     /**< @brief Read command byte*/
+#define WRITE_CB 0x60    /**< @brief Write command byte*/
+#define EN_MOUSE 0xA8    /**< @brief Enable mouse*/
+#define DIS_MOUSE 0xA7   /**< @brief Disable mouse*/
+#define CHECK_INTER 0xA9 /**< @brief Check mouse interface*/
+#define WRITE_BYTE 0xD4  /**< @brief Write byte to mouse command*/
 
 /*STATUS REGISTER*/
-#define PARITY BIT(7)  //parity error
-#define TIMEOUT BIT(6) //timeout error
-#define AUX BIT(5)     //mouse data
+#define PARITY BIT(7)  /**< @brief Parity Error*/
+#define TIMEOUT BIT(6) /**< @brief Time Out Error */
+#define AUX BIT(5)     /**< @brief Incoming data from mouse*/
 #define A2 BIT(3)      //A2 input line, 0: data byte, 1: command byte
-#define SYS BIT(2)     //system flag, 0: system in power-on reset, 1: system already initialized
-#define IBF BIT(1)     //input buffer full
-#define OBF BIT(0)     //output buffer full
+#define IBF BIT(1)     /**< @brief Input buffer full */
+#define OBF BIT(0)     /**< @brief Output buffer full */
 
 /*KBC COMMAND BYTE*/
-#define INT BIT(0)  //enable interrupt on OUT_BUF, from keyboard
-#define INT2 BIT(1) //enable interrupt on OUT_BUF, from mouse
-#define DIS BIT(4)  //disable keyboard interface
-#define DIS2 BIT(5) //disable mouse interface
+#define INT BIT(0)  /**< @brief Enable interrupt on OUT_BUF, from keyboard*/
+#define INT2 BIT(1) /**< @brief Enable interrupt on OUT_BUF, from mouse*/
+#define DIS BIT(4)  /**< @brief Disable keyboard interface*/
+#define DIS2 BIT(5) /**< @brief Disable mouse interface*/
 
 /*MOUSE COMMANDS*/
-#define RESET 0xFF           //mouse reset
-#define RESEND 0xFE          //for serial communications errors
-#define SET_DEFAULTS 0xF6    //set default values
-#define DISABLE 0xF5         //in stream mode, should be sent before any other command
-#define ENABLE 0xF4          //in stream mode only
-#define SET_SAMPLE_RATE 0xF3 //sets state sampling rate
-#define SET_REMOTE_MODE 0xF0 //send data on request only
-#define READ_DATA 0xEB       //send data packet request
-#define SET_STREAM_MODE 0xFA //send data on events
-#define STATUS_REQUEST 0xF9  //get mouse configuration
-#define SET_RESOLUTION 0xF8
-#define SET_SCALING_21 0xF7 //acceleration mode
-#define SET_SCALING_11 0xF6 //linear mode
+#define RESET 0xFF           /**< @brief Mouse reset*/
+#define RESEND 0xFE          /**< @brief Communication error*/
+#define SET_DEFAULTS 0xF6    /**< @brief Set default values*/
+#define DISABLE 0xF5         /**< @brief Disable stream mode*/
+#define ENABLE 0xF4          /**< @brief Enable stream mode*/
+#define SET_SAMPLE_RATE 0xF3 /**< @brief Set sample rate*/
+#define SET_REMOTE_MODE 0xF0 /**< @brief Set remote mode*/
+#define READ_DATA 0xEB       /**< @brief Polling mouse data*/
+#define SET_STREAM_MODE 0xFA /**< @brief Set stream mode*/
+#define STATUS_REQUEST 0xF9  /**< @brief Get mouse configuration*/
 
 /*MOUSE CONTROLLER ACKNOWLEDGMENT BYTE*/
-#define ACK 0xFA   //everything ok
-#define NACK 0xFE  //invalid byte
-#define ERROR 0xFC //second consecutive invalid byte
-#define REMOTE 0xF0
-#define STREAM 0xEA
+#define ACK 0xFA    /**< @brief Acknowledgment byte ok*/
+#define NACK 0xFE   /**< @brief Acknowledgment byte invalid*/
+#define ERROR 0xFC  /**< @brief Acknowledgment byte error*/
+#define REMOTE 0xF0 /**< @brief Remote mode*/
+#define STREAM 0xEA /**< @brief  Stream mode*/
 
-#define WAIT_KBC 20000
-#define KBC_IRQ 1
-#define TIMER0_IRQ 0 //timer 0 line
-#define MOUSE_IRQ 12 //mouse line
-#define BREAK_ESC 0x81
+#define WAIT_KBC 20000 /**< @brief ms time to wait*/
+#define KBC_IRQ 1      /**< @brief KBC IRQ LINE*/
+#define TIMER0_IRQ 0   /**< @brief TIMER IRQ LINE*/
+#define MOUSE_IRQ 12   /**< @brief MOUSE IRQ LINE*/
+#define BREAK_ESC 0x81 /**< @brief ESC BREAK CODE*/
 
 /*COMMAND BYTE 1 BITS MEANING */
 
-#define LB BIT(0)
-#define RB BIT(1)
-#define MB BIT(2)
-#define MSB_X_DELTA BIT(4)
-#define MSB_Y_DELTA BIT(5)
-#define X_OV BIT(6)
-#define Y_OV BIT(7)
+#define LB BIT(0)          /**< @brief LEFT BUTTON PRESSED*/
+#define RB BIT(1)          /**< @brief RIGHT BUTTON PRESSED*/
+#define MB BIT(2)          /**< @brief MID BUTTON PRESSED*/
+#define MSB_X_DELTA BIT(4) /**< @brief MOUSE DELTA X*/
+#define MSB_Y_DELTA BIT(5) /**< @brief MOUSE DELTA Y*/
+#define X_OV BIT(6)        /**< @brief MOUSE DELTA X OVERFLOW*/
+#define Y_OV BIT(7)        /**< @brief MOUSE DELTA Y OVERFLOW*/
 
 /*BUTTONS*/
 
-#define MAIN_SINGLE_PLAYER 11
-#define MAIN_INSTRUCTIONS 12
-#define MAIN_EXIT 13
-#define PAUSED_RESUME 21
-#define PAUSED_MAIN_MENU 22
-#define PAUSED_EXIT 23
-#define WON_MAIN_MENU 31
-#define WON_EXIT 32
-#define FAILED_MAIN_MENU 41
-#define FAILED_EXIT 42
-#define SWIPE_LEFT 51
-#define SWIPE_RIGHT 52
-#define START 53
-#define INSTRUCTIONS_HOME_BUTTON 6
+#define MAIN_SINGLE_PLAYER 11      /**< @brief SINGLE PLAYER BUTTON - MAIN MENU*/
+#define MAIN_INSTRUCTIONS 12       /**< @brief INSTRUCTIONS BUTTON - MAIN MENU*/
+#define MAIN_EXIT 13               /**< @brief EXIT BUTTON - MAIN MENU*/
+#define PAUSED_RESUME 21           /**< @brief PAUSE BUTTON - PAUSE MENU*/
+#define PAUSED_MAIN_MENU 22        /**< @brief MAIN MENU BUTTON - PAUSE MENU*/
+#define PAUSED_EXIT 23             /**< @brief  EXIT BUTTON - PAUSE MENU */
+#define WON_MAIN_MENU 31           /**< @brief MAIN MENU BUTTON- WON MENU*/
+#define WON_EXIT 32                /**< @brief EXIT BUTTON* - WON MENU*/
+#define FAILED_MAIN_MENU 41        /**< @brief MAIN MENU BUTTON - FAILED MENU*/
+#define FAILED_EXIT 42             /**< @brief EXIT BUTTON - FAILED MENU*/
+#define SWIPE_LEFT 51              /**< @brief SWIPE LEFT BUTTON - CHOOSE PLAYER MENU*/
+#define SWIPE_RIGHT 52             /**< @brief SWIPE RIGHT BUTTON - CHOOSE PLAYER MENU*/
+#define START 53                   /**< @brief START BUTTON - CHOOSE PLAYER MENU*/
+#define INSTRUCTIONS_HOME_BUTTON 6 /**< @brief HOME BUTTON - INSTRUCTIONS MENU*/
 
 /*KEYBOARD*/
 
-#define MAKE_UP_ARROW 0x48
-#define MAKE_LEFT_ARROW 0x4B
-#define MAKE_RIGHT_ARROW 0x4D
-#define MAKE_UP_W 0x11
-#define MAKE_LEFT_A 0x1E
-#define MAKE_RIGHT_B 0x20
-#define BREAK_ESC 0x81
+#define MAKE_UP_ARROW 0x48    /**< @brief UP ARROW MAKE CODE*/
+#define MAKE_LEFT_ARROW 0x4B  /**< @brief LEFT ARROW MAKE CODE*/
+#define MAKE_RIGHT_ARROW 0x4D /**< @brief RIGHT ARROW MAKE CODE*/
+#define MAKE_UP_W 0x11        /**< @brief W MAKE CODE*/
+#define MAKE_LEFT_A 0x1E      /**< @brief A MAKE CODE*/
+#define MAKE_RIGHT_B 0x20     /**< @brief B MAKE CODE*/
+#define BREAK_ESC 0x81        /**< @brief ESC BREAK CODE*/
 
 /* RTC */
-#define RTC_IRQ 8
-#define RTC_ADDR_REG 0x70
-#define RTC_DATA_REG 0x71
-#define RTC_SECONDS 0
-#define RTC_MINUTES 2
-#define RTC_HOURS 4
-#define RTC_DAY_OF_MONTH 7
-#define RTC_MONTH 8
-#define RTC_YEAR 9
-#define RTC_REG_A 10
-#define RTC_REG_B 11
-#define RTC_REG_C 12
-#define RTC_REG_A_UI BIT(7)
-#define RTC_REG_B_SET BIT(7)  //set to 1 to inhibit updates of time/date registers
-#define RTC_REG_B_PI BIT(6)   //set to 1 to enable periodic interrupts
-#define RTC_REG_B_AI BIT(5)   //set to 1 to enable alarm interrupts
-#define RTC_REG_B_UI BIT(4)   //set to 1 to enable update interrupts
-#define RTC_REG_B_DM BIT(2)   //set to 1 to set registers in binary, set to 0 for BCD
-#define RTC_REG_B_2412 BIT(1) //set to 1 to set hours range from 0 to 23, set to 0 to range from 1 to 12
-#define RTC_REG_C_IRQF BIT(7) //if set, IRQ line pending
-#define RTC_REG_C_PF BIT(6)   //if set, periodic interrupt pending
-#define RTC_REG_C_AF BIT(5)   //if set, alarm interrupt pending
-#define RTC_REG_C_UE BIT(4)   //if set, update interrupt pending
+#define RTC_IRQ 8           /**< @brief RTC IRQ LINE */
+#define RTC_ADDR_REG 0x70   /**< @brief RTC ADDRESS REGISTER */
+#define RTC_DATA_REG 0x71   /**< @brief RTC DATA REGISTER */
+#define RTC_SECONDS 0       /**< @brief RTC SECONDS*/
+#define RTC_MINUTES 2       /**< @brief RTC MINUTES */
+#define RTC_HOURS 4         /**< @brief RTC HOURS */
+#define RTC_DAY_OF_MONTH 7  /**< @brief RTC DAY */
+#define RTC_MONTH 8         /**< @brief RTC MONTH */
+#define RTC_YEAR 9          /**< @brief RTC YEAR */
+#define RTC_REG_A 10        /**< @brief RTC REGISTER A */
+#define RTC_REG_B 11        /**< @brief RTC REGISTER B */
+#define RTC_REG_C 12        /**< @brief RTC REGISTER C */
+#define RTC_REG_A_UI BIT(7) /**< @brief RTC REGISTER A PENDING INTERRUPT */
+#define RTC_REG_B_PI BIT(6) /**< @brief RTC REGISTER B ENABLE PERIODIC INTERRUPTS */
+#define RTC_REG_B_UI BIT(4) /**< @brief RTC REGISTER B ENABLE UPDATE INTERRUPTS */
+#define RTC_REG_B_DM BIT(2) /**< @brief RTC BINARY OR BCD DATA */
+#define RTC_REG_C_PF BIT(6) /**< @brief RTC REGISTER C PENDING INTERRUPT */
 
 /* OTHER GAME MACROS */
 
-#define WAIT 200
-#define STEP_KB 4
-#define STEP_JUMP_X 4
-#define STEP_JUMP_Y 12
-#define STEP_TXT 10
-#define DELTA_Y 10
-#define NUM_PRESENTS 6
-#define NUM_PLATFORMS 9
-#define TIME_LIMIT 240
-#define SEA_BACK_X0 470
-#define SEA_MIDDLE_X0 440
-#define WAVE_WIDTH 77
-#define HALF_SECOND_TICKS 30
-#define SECOND_TICKS 60
-#define IN_POS_X 445
-#define OUT_LEFT_POS_X 107
-#define OUT_RIGHT_POS_X 810
+#define WAIT 200             /**< @brief WAIT TIME IN MS */
+#define STEP_KB 4            /**< @brief DELTA X SPRITE W/ KEYBOARD INT */
+#define STEP_JUMP_X 4        /**< @brief DELTA X JUMPING SPRITE  */
+#define STEP_JUMP_Y 12       /**< @brief DELTA Y JUMPING SPRITE  */
+#define STEP_TXT 10          /**< @brief DELTA Y TEXT IN INSTRUCTIONS */
+#define DELTA_Y 10           /**< @brief DELTA Y INTERVAL FOR CALCULATIONS  */
+#define NUM_PRESENTS 6       /**< @brief NUMBER OF PRESENTS  */
+#define NUM_PLATFORMS 9      /**< @brief NUMBER OF PLATFORMS  */
+#define TIME_LIMIT 240       /**< @brief TIME LIMIT  */
+#define SEA_BACK_X0 470      /**< @brief SEA BACK XPOSITION */
+#define SEA_MIDDLE_X0 440    /**< @brief SEA MID XPOSITION  */
+#define WAVE_WIDTH 77        /**< @brief SEA DELTA X MOVE */
+#define HALF_SECOND_TICKS 30 /**< @brief SECONDS TICKS */
+#define SECOND_TICKS 60      /**< @brief SECONDS TICKS */
+#define IN_POS_X 445         /**< @briefHALF IN THE CHOOSING BOX X POS  */
+#define OUT_LEFT_POS_X 80    /**< @briefHALF ON THE LEFT OF THE CHOOSING BOX X POS  */
+#define OUT_RIGHT_POS_X 810  /**< @briefHALF ON THE RIGHT OF THE CHOOSING BOX X POS  */
+#define IGLO_X 1037          /**<@briefHALF IGLO'S WINNING POS */
 
 #endif

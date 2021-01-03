@@ -2,6 +2,7 @@
 #define GAME_CTRL
 
 #include "macros.h"
+#include "rtc.h"
 #include "video_gr.h"
 #include <lcom/lcf.h>
 #include <stdbool.h>
@@ -39,6 +40,11 @@ struct buttons_ {
   struct button failed_main_menu_button, failed_exit_button;
   struct button completed_main_menu_button, completed_exit_button;
   struct button instructions_home_button;
+};
+
+struct time_t {
+  uint8_t minutes;
+  uint8_t hours;
 };
 
 typedef enum { INITMENU,
@@ -89,7 +95,7 @@ extern struct sprite **players;
 extern struct sprite *curr_santa_sp;
 extern struct sprite *santa_sp;
 extern struct sprite *covid_santa_sp;
-extern struct sprite *current_santa;
+extern struct sprite current_santa;
 extern struct sprite **current_santa_walk_right;
 extern struct sprite **current_santa_walk_left;
 extern struct sprite **current_santa_jump_right;
@@ -102,8 +108,12 @@ extern struct sprite **covid_santa_walk_right;
 extern struct sprite **covid_santa_walk_left;
 extern struct sprite **covid_santa_jump_right;
 extern struct sprite **covid_santa_jump_left;
+extern struct sprite **loading;
 extern struct sprite **time_numbers;
 extern struct sprite **current_time;
+extern struct sprite **rtc_numbers;
+extern struct sprite **rtc_time;
+extern struct sprite *rtc_sep;
 extern struct present *presents;
 extern struct sprite *presents_animated;
 extern struct sprite bigpresent;
@@ -112,7 +122,9 @@ extern struct platform *platforms;
 struct buttons_ *buttons;
 extern uint8_t keyboard_data;
 extern struct packet mouse_packet;
-extern int i;
+struct time_t curr_time;
+
+extern bool moving;
 static int mouse_santa_sp_right_counter = 0;
 static int mouse_santa_sp_left_counter = 0;
 static int santa_sp_up_counter = 0;
@@ -128,60 +140,171 @@ static unsigned cronometer;
 static int instructions_ov_y = 270;
 static unsigned int choose_player_ix = 0;
 
+/**
+ * @brief Displays the background and cursor
+*/
 void update_display();
 
+/**
+ * @brief Displays the player sprite
+*/
 void update_display_player();
 
+/**
+ * @brief Displays the instructions menu
+*/
 void update_display_instructions();
 
+/**
+ * @brief Displays the background whilst playing mode
+*/
 void update_playing_display();
 
+/**
+ * @brief updates the sea moving pos
+*/
+void update_sea_pos();
+
+/**
+ * @brief Displays the real time
+*/
+void display_time();
+
+/**
+ * @brief Displays the game time count down
+*/
 void display_cronometer();
 
+/**
+ * @brief Displays the loading background
+*/
+void display_init();
+
+/**
+ * @brief Displays the presents
+*/
 void display_presents();
 
+/**
+ * @brief Checks whether or not the a certain button (received as parameter) was pressed
+ * @param button
+ * @return true if the button passed as parameter was pressed, false otherwise
+*/
 bool check_button(uint8_t button);
 
+/**
+ * @brief Checks whether or not a present was catched
+ * @return the number of the present catched, -1 if none
+*/
 int check_present();
 
+/**
+ * @brief Check if the game conditions to verify if it time to end and changes game state accordingly
+*/
 void check_victory();
 
+/**
+ * @brief Checks santa orientation
+ * @return 0 if right, 1 if left
+*/
 int check_right_left();
 
+/**
+ * @brief Registers the capture of a present and removes the catched present from display
+*/
 void catch_present(int present_ix);
 
+/**
+ * @brief Updates the time array
+*/
+void update_time();
+
+/**
+ * @brief Updates the cronometer array
+*/
 void update_cronometer();
 
+/**
+ * @brief Updates cursor's position
+*/
 void update_cursor();
 
+/**
+ * @brief Updates player's position
+*/
 void update_santa_pos();
 
+/**
+ * @brief Resets cronometer array to its defaul 4 minutes
+*/
 void reset_cronometer();
 
+/**
+ * @brief Changes the player sprite displayed with the sprite passed as parameter
+ * @param new_sp
+*/
 void set_santa(struct sprite *new_sp);
 
+/**
+ * @brief Sets sprites according to player choosed
+*/
 void set_player();
 
+/**
+ * @brief Resets player's initial position
+*/
 void reset_santa();
 
+/**
+ * @brief Resets presents
+*/
 void reset_presents();
 
+/**
+ * @brief Changes santa state according to mouse's input
+*/
 void mouse_events_handler_while_playing();
 
+/**
+ * @brief changes game state according to mouse's input
+*/
 void mouse_events_handler();
 
+/**
+ * @brief Sets keyboard's event according to keyboard's input
+*/
 void set_keyboard_events();
 
+/**
+ * @brief Changes game state and backgrounds according to keyboard's input
+*/
 void keyboard_events_handler();
 
+/**
+ * @brief Handles all the changes that must be done periodically such as displays and updates
+*/
 void timer_events_handler();
 
+/**
+ * @brief Verifies if the player is standing in a platform 
+ * @return the number of the platform the player is on, -1 if none
+*/
 int get_current_platform();
 
+/**
+ * @brief Checks the player's colisions and changes its position accordingly (incrementing the position with the step received as parameter)
+ * @param step
+*/
 void check_collision(uint16_t step);
 
+/**
+ * @brief Checks the player's moves, keyboard input,and updates the sprite displayed accordingly
+*/
 void move_santa_keyboard();
 
+/**
+ * @brief Checks the player's moves, mouse input,and updates the sprite displayed accordingly
+*/
 void move_santa_mouse();
 
 #endif

@@ -1,5 +1,6 @@
 #include "rtc.h"
 #include "macros.h"
+#include "math.h"
 #include <lcom/lcf.h>
 #include <lcom/liblm.h>
 #include <lcom/proj.h>
@@ -71,8 +72,19 @@ int rtc_set_BCD() {
   return 1;
 }
 
-void BCD_to_binary(uint8_t value) {
-  value = (value & 0x0F) + ((value & 0xF0) >> 4) * 10;
+void BCD_to_binary(uint8_t *value) {
+  *value = (*value & 0x0F) + ((*value & 0xF0) >> 4) * 10;
+}
+
+uint8_t binary_to_decimal(uint8_t value) {
+
+  uint8_t decimal = 0;
+  for (unsigned int i = 0; i < 8; i++) {
+    if (value & BIT(i)) {
+      decimal += pow(2, i);
+    }
+  }
+  return decimal;
 }
 
 bool rtc_reading_allowed() {
@@ -92,43 +104,13 @@ void rtc_ih(uint8_t source) {
   }
 
   uint8_t reg = 0;
-  if (rtc_write_command(RTC_REG_B) == 0) {
+  if (rtc_write_command(RTC_REG_C) == 0) {
     util_sys_inb(RTC_DATA_REG, &reg);
     if (reg & source) {
-      rtc_read_date();
       rtc_read_time();
       return;
     }
   }
-}
-
-int rtc_read_date() {
-  if (!rtc_reading_allowed()) {
-    return 1;
-  }
-  rtc_set_BCD();
-
-  if (rtc_write_command(RTC_DAY_OF_MONTH) == 0) {
-    if (util_sys_inb(RTC_DATA_REG, &curr_date.day) != 0) {
-      BCD_to_binary(curr_date.day);
-      return 0;
-    }
-  }
-
-  if (rtc_write_command(RTC_MONTH) == 0) {
-    if (util_sys_inb(RTC_DATA_REG, &curr_date.month) != 0) {
-      BCD_to_binary(curr_date.month);
-      return 0;
-    }
-  }
-
-  if (rtc_write_command(RTC_YEAR) == 0) {
-    if (util_sys_inb(RTC_DATA_REG, &curr_date.year) != 0) {
-      BCD_to_binary(curr_date.year);
-      return 0;
-    }
-  }
-  return 1;
 }
 
 int rtc_read_time() {
@@ -137,23 +119,17 @@ int rtc_read_time() {
   }
   rtc_set_BCD();
 
-  if (rtc_write_command(RTC_SECONDS) == 0) {
-    if (util_sys_inb(RTC_DATA_REG, &curr_time.seconds) != 0) {
-      BCD_to_binary(curr_time.seconds);
-      return 0;
-    }
-  }
-
   if (rtc_write_command(RTC_MINUTES) == 0) {
     if (util_sys_inb(RTC_DATA_REG, &curr_time.minutes) != 0) {
-      BCD_to_binary(curr_time.minutes);
+
+      BCD_to_binary(&curr_time.minutes);
       return 0;
     }
   }
 
   if (rtc_write_command(RTC_HOURS) == 0) {
     if (util_sys_inb(RTC_DATA_REG, &curr_time.hours) != 0) {
-      BCD_to_binary(curr_time.hours);
+      BCD_to_binary(&curr_time.hours);
       return 0;
     }
   }
